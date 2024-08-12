@@ -5,7 +5,7 @@ from typing import List
 
 from rich.console import Console
 
-from src.api import IPInfoAPI
+from src.ipapi_api import IPInfoAPI
 from src.input_processor import extract_ips_from_logs, parse_input_file
 from src.output import save_to_csv, save_to_json
 from src.table_formatter import create_rich_table

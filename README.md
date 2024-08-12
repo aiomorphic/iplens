@@ -153,11 +153,15 @@ If there are specific fields you wish to exclude from the output, you can config
 ### Setup
 
 1. Clone the repository
+   ```bash
+   git clone https://github.com/aiomorphic/iplens.git
+   cd iplens
+   ```
 2. Create a virtual environment: `python -m venv venv`
 3. Activate the virtual environment:
     - Windows: `venv\Scripts\activate`
     - Unix or MacOS: `source venv/bin/activate`
-4. Install development dependencies: `pip install -e ".[dev]"`
+4. Install development dependencies: `pip install -r requirements.txt`
 
 ### Pre commit checks
 
@@ -167,6 +171,6 @@ make pre-commit
 
 ### Adding New Features
 
-1. Implement new functionality in the appropriate module under `iplens/`
-2. Add tests for new functionality in `tests/`
-3. Update `iplens_cli.py` if the new feature should be accessible via CLI
+Implement new functionality in the appropriate module under iplens/.
+Add tests for the new functionality in tests/.
+Update iplens_cli.py if the new feature should be accessible via CLI.

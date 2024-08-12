@@ -1,6 +1,6 @@
 import unittest
 
-from src.api import IPInfoAPI
+from src.ipapi_api import IPInfoAPI
 from src.utils import FIELDNAMES
 
 

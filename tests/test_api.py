@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from src.api import IPInfoAPI
+from src.ipapi_api import IPInfoAPI
 from src.db_cache import DBCache
 
 
