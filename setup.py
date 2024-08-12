@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -12,8 +12,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/aiomorphic/iplens",
-    packages=find_packages(where='src', exclude=["tests*"]),
-    package_dir={'': 'src'},
+    packages=find_packages(where="src", exclude=["tests*"]),
+    package_dir={"": "src"},
     install_requires=[
         "requests>=2.25.1,<3.0.0",
         "rich>=10.0.0,<11.0.0",
@@ -24,7 +24,7 @@ setup(
         ],
     },
     package_data={
-        'iplens': ['config.cfg'],
+        "iplens": ["config.cfg"],
     },
     include_package_data=True,
     classifiers=[

@@ -1,7 +1,7 @@
 import unittest
 
-from src.ipapi_api import IPInfoAPI
-from src.utils import FIELDNAMES
+from src.iplens.ipapi_api import IPInfoAPI
+from src.iplens.utils import FIELDNAMES
 
 
 class TestDataProcessing(unittest.TestCase):

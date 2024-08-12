@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from src.ipapi_api import IPInfoAPI
-from src.db_cache import DBCache
+from src.iplens.db_cache import DBCache
+from src.iplens.ipapi_api import IPInfoAPI
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def mock_db_cache():
 
 @pytest.fixture
 def ip_info_api(mock_db_cache):
-    with patch("src.api.DBCache", return_value=mock_db_cache):
+    with patch("src.iplens.ipapi_api.DBCache", return_value=mock_db_cache):
         return IPInfoAPI()
 
 
@@ -42,7 +42,7 @@ def test_fetch_data_cached(ip_info_api, mock_db_cache, sample_ip_data):
     mock_db_cache.get.assert_called_once_with("172.71.223.44")
 
 
-@patch("src.api.requests.get")
+@patch("src.iplens.ipapi_api.requests.get")
 def test_fetch_data_single_ip(mock_get, ip_info_api, mock_db_cache, sample_ip_data):
     mock_db_cache.get.return_value = None
     mock_get.return_value.json.return_value = sample_ip_data
@@ -95,7 +95,7 @@ def test_fetch_data_single_ip(mock_get, ip_info_api, mock_db_cache, sample_ip_da
     mock_db_cache.set.assert_called_once()
 
 
-@patch("src.api.requests.post")
+@patch("src.iplens.ipapi_api.requests.post")
 def test_fetch_data_bulk(mock_post, ip_info_api, mock_db_cache):
     mock_db_cache.get.return_value = None
     mock_post.return_value.json.return_value = {
@@ -132,7 +132,7 @@ def test_process_response(ip_info_api, sample_ip_data):
     assert processed_data["location_country"] == "United States"
 
 
-@patch("src.api.requests.get")
+@patch("src.iplens.ipapi_api.requests.get")
 def test_fetch_single_ip_info_error(mock_get, ip_info_api):
     mock_response = Mock()
     mock_response.ok = False
@@ -151,7 +151,7 @@ def test_fetch_single_ip_info_error(mock_get, ip_info_api):
     mock_get.assert_called_once_with(f"{ip_info_api.api_url}?q=172.71.223.44")
 
 
-@patch("src.api.requests.post")
+@patch("src.iplens.ipapi_api.requests.post")
 def test_fetch_ip_info_error(mock_post, ip_info_api):
     mock_post.return_value.ok = False
     mock_post.return_value.status_code = 500

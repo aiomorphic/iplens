@@ -5,8 +5,8 @@ from typing import List
 
 from rich.console import Console
 
-from iplens.ipapi_api import IPInfoAPI
 from iplens.input_processor import extract_ips_from_logs, parse_input_file
+from iplens.ipapi_api import IPInfoAPI
 from iplens.output import save_to_csv, save_to_json
 from iplens.table_formatter import create_rich_table
 from iplens.utils import is_valid_ip
