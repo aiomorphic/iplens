@@ -1,0 +1,15 @@
+__pycache__
+.env
+.git
+.mypy_cache
+.pytest_cache
+*.csv
+*.db
+*.egg-info
+*.json
+*.log
+*.pyc
+build/
+dist/
+todo
+venv/
