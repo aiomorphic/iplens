@@ -5,11 +5,11 @@ from typing import List
 
 from rich.console import Console
 
-from src.ipapi_api import IPInfoAPI
-from src.input_processor import extract_ips_from_logs, parse_input_file
-from src.output import save_to_csv, save_to_json
-from src.table_formatter import create_rich_table
-from src.utils import is_valid_ip
+from iplens.ipapi_api import IPInfoAPI
+from iplens.input_processor import extract_ips_from_logs, parse_input_file
+from iplens.output import save_to_csv, save_to_json
+from iplens.table_formatter import create_rich_table
+from iplens.utils import is_valid_ip
 
 
 def ensure_file_extension(filename: str, format: str) -> str:

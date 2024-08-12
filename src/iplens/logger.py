@@ -2,7 +2,7 @@ import logging
 
 from rich.logging import RichHandler
 
-from src.config_loader import load_config
+from iplens.config_loader import load_config
 
 config = load_config()
 log_level_str = config.get("Logging", "level", fallback="INFO").upper()

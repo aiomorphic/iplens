@@ -2,9 +2,9 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from src.config_loader import load_config
-from src.logger import logger
-from src.utils import FIELDNAMES
+from iplens.config_loader import load_config
+from iplens.logger import logger
+from iplens.utils import FIELDNAMES
 
 
 class DBCache:

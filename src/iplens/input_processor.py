@@ -3,7 +3,7 @@ import json
 import re
 from typing import List, Optional, Sequence
 
-from src.utils import is_valid_ip
+from iplens.utils import is_valid_ip
 
 
 def extract_ips_from_logs(content: str) -> List[str]:

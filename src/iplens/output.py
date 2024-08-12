@@ -2,8 +2,8 @@ import csv
 import json
 from typing import Dict, List
 
-from src.logger import logger
-from src.utils import FIELDNAMES
+from iplens.logger import logger
+from iplens.utils import FIELDNAMES
 
 
 def save_to_csv(data: List[Dict], output_file: str):

@@ -4,11 +4,11 @@ from typing import Any, Dict, List
 
 import requests
 
-from src.base_operations import IPInfoOperation
-from src.config_loader import load_config
-from src.db_cache import DBCache
-from src.logger import logger
-from src.utils import FIELDNAMES
+from iplens.base_operations import IPInfoOperation
+from iplens.config_loader import load_config
+from iplens.db_cache import DBCache
+from iplens.logger import logger
+from iplens.utils import FIELDNAMES
 
 
 class IPInfoAPI(IPInfoOperation):
