@@ -7,6 +7,20 @@ A  lightweight CLI tool designed for fetching and displaying detailed IP address
 
 ## Installation
 
+### Install via pip
+
+You can install the IP Lens CLI tool directly from PyPI:
+
+```bash
+pip install iplens
+```
+
+### Install from source
+
+To build and install the tool from source:
+
+Clone the repository:
+
 ```bash
 git clone https://github.com/aiomorphic/iplens.git
 cd iplens
@@ -137,16 +151,19 @@ This will fetch and process the IP information for the given IP addresses. The r
 
 ### Configuration
 
-The API URL, logging level, and other constants can be configured in the config.cfg file. You can modify the configuration file to suit your specific requirements. The available fields and their purposes are defined in the src/config_loader.py.
-API Limits
+The configuration file is located at `src/iplens/config.cfg`. You can modify the configuration file to suit your specific requirements. The available fields and their purposes are defined in the `src/config_loader.py`.
+
+### API Limits
 
 Note that the API has rate limits in its free, unregistered mode. If you encounter a rate limit, simply wait for 20 minutes and then continue using the tool.
-Caching
 
-IP Lens includes a caching mechanism to store fetched IP information locally. This helps reduce the number of API calls, especially when processing large lists of IPs. The cache is automatically cleared after a configurable expiration period, which can be set in the config.cfg file.
-Ignoring Fields
+### Caching
 
-If there are specific fields you wish to exclude from the output, you can configure this in the src/utils.py file, where the list of field names is defined. This allows you to customize the output based on your needs.
+IP Lens includes a caching mechanism to store fetched IP information locally. This helps reduce the number of API calls, especially when processing large lists of IPs. The cache is automatically cleared after a configurable expiration period, which can be set in the `config.cfg` file.
+
+### Ignoring Fields
+
+If there are specific fields you wish to exclude from the output, you can configure this in the `src/utils.py` file, where the list of field names is defined. This allows you to customize the output based on your needs.
 
 ## Development
 
