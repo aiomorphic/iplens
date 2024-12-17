@@ -1,7 +1,5 @@
 import configparser
-import importlib.resources as pkg_resources
-
-from iplens import config_loader
+import os
 
 
 def load_config(config_file="config.cfg"):
@@ -15,9 +13,13 @@ def load_config(config_file="config.cfg"):
         configparser.ConfigParser: Loaded configuration object.
     """
     config = configparser.ConfigParser()
-    config_path = pkg_resources.files(config_loader).joinpath(config_file)
-    with config_path.open("r", encoding="utf-8") as config_file_handle:
-        config.read_file(config_file_handle)
+
+    # Resolve path relative to the current module
+    config_path = os.path.join(os.path.dirname(__file__), config_file)
+
+    # Read the configuration file
+    config.read(config_path)
+
     return config
 
 
