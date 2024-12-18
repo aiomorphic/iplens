@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="iplens",
-    version="0.1.7",
+    version="0.1.8",
     author="aiomorphic",
     author_email="iplens@proton.me",
     description="A lightweight, modern, robust IP info CLI tool",

@@ -151,35 +151,52 @@ class IPInfoAPI(IPInfoOperation):
         Returns:
             Dict[str, Any]: A dictionary with the processed IP information.
         """
-        if not isinstance(response, dict):
-            logger.warning("Response is not a dictionary, returning empty data")
-            return {}
+        if not response or not isinstance(response, dict):
+            logger.warning(f"Invalid response received: {response}")
+            return {field: "" for field in FIELDNAMES}
 
         data = {}
         for field in FIELDNAMES:
-            parts = field.split("_")
-            if len(parts) == 1:
-                value = response.get(field)
-            else:
-                category, subfield = parts[0], "_".join(parts[1:])
-                value = response.get(category, {}).get(subfield)
-                if value is None:
+            try:
+                parts = field.split("_")
+                if len(parts) == 1:
                     value = response.get(field)
+                else:
+                    category, subfield = parts[0], "_".join(parts[1:])
+                    category_data = response.get(category, {})
+                    if not isinstance(category_data, dict):
+                        value = response.get(field)
+                    else:
+                        value = category_data.get(subfield)
+                        if value is None:
+                            value = response.get(field)
 
-            if value is not None:
-                if field == "asn_asn" and value and not str(value).startswith("AS"):
-                    value = f"AS{value}"
+                if value is not None:
+                    if field == "asn_asn" and value and not str(value).startswith("AS"):
+                        value = f"AS{value}"
 
-                if value is False:
-                    value = "False"
-                elif value is True:
-                    value = "True"
-                data[field] = str(value)
-            else:
+                    if value is False:
+                        value = "False"
+                    elif value is True:
+                        value = "True"
+                    data[field] = str(value)
+                else:
+                    data[field] = ""
+            except Exception as e:
+                logger.error(f"Error processing field {field}: {str(e)}")
                 data[field] = ""
 
-        if "rir" in FIELDNAMES and "asn" in response and "rir" in response["asn"]:
-            data["rir"] = response["asn"]["rir"]
+        # Special handling for RIR field
+        try:
+            if (
+                "rir" in FIELDNAMES
+                and "asn" in response
+                and isinstance(response["asn"], dict)
+            ):
+                data["rir"] = response["asn"].get("rir", "")
+        except Exception as e:
+            logger.error(f"Error processing RIR field: {str(e)}")
+            data["rir"] = ""
 
         logger.debug(f"Processed response data: {data}")
         return data

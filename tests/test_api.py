@@ -5,6 +5,7 @@ import requests
 
 from src.iplens.db_cache import DBCache
 from src.iplens.ipapi_api import IPInfoAPI
+from src.iplens.utils import FIELDNAMES
 
 
 @pytest.fixture
@@ -167,3 +168,51 @@ def test_fetch_ip_info_error(mock_post, ip_info_api):
 def test_clear_expired_cache(ip_info_api, mock_db_cache):
     ip_info_api.clear_expired_cache()
     mock_db_cache.clear_expired.assert_called_once()
+
+
+def test_process_response_with_none_values(ip_info_api):
+    # Test data with None values in nested fields
+    sample_data_with_none = {
+        "ip": "172.71.223.44",
+        "asn": None,  # This caused the original error
+        "location": None,
+        "company": None,
+    }
+
+    processed_data = ip_info_api.process_response(sample_data_with_none)
+
+    # Verify that all fields are present with empty strings
+    assert processed_data["ip"] == "172.71.223.44"
+    assert processed_data["asn_asn"] == ""
+    assert processed_data["rir"] == ""
+    assert processed_data["location_country"] == ""
+    assert processed_data["company_name"] == ""
+    assert all(processed_data[field] == "" for field in processed_data if field != "ip")
+
+
+def test_process_response_with_invalid_nested_structure(ip_info_api):
+    # Test data with invalid nested structure
+    sample_data_invalid = {
+        "ip": "172.71.223.44",
+        "asn": "AS12345",  # Not a dict as expected
+        "location": "US",  # Not a dict as expected
+        "company": True,  # Not a dict as expected
+    }
+
+    processed_data = ip_info_api.process_response(sample_data_invalid)
+
+    # Verify that the processing handles invalid nested structures
+    assert processed_data["ip"] == "172.71.223.44"
+    assert processed_data["asn_asn"] == ""
+    assert processed_data["location_country"] == ""
+    assert processed_data["company_name"] == ""
+
+
+def test_process_response_completely_none(ip_info_api):
+    # Test with None response
+    processed_data = ip_info_api.process_response(None)
+
+    # Verify that all fields are present with empty strings
+    assert all(isinstance(v, str) for v in processed_data.values())
+    assert all(v == "" for v in processed_data.values())
+    assert set(processed_data.keys()) == set(FIELDNAMES)
