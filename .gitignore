@@ -3,6 +3,7 @@ __pycache__
 .git
 .mypy_cache
 .pytest_cache
+.coverage
 *.csv
 *.db
 *.egg-info
