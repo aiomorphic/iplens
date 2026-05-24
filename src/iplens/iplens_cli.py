@@ -3,6 +3,7 @@ import os
 import sys
 from typing import List
 
+import requests
 from rich.console import Console
 
 from iplens.input_processor import extract_ips_from_logs, parse_input_file
@@ -95,7 +96,8 @@ def main():
         ips = [ip for ip in args.ips if is_valid_ip(ip)]
     else:
         console.print(
-            "Error: No IP addresses provided. Use positional arguments, --input-file, or --input-folder. or -h for help",
+            "Error: No IP addresses provided. Use positional arguments, "
+            "--input-file, --input-folder, or -h for help.",
             style="bold red",
         )
         sys.exit(1)
@@ -106,11 +108,27 @@ def main():
 
     console.print(f"Fetching data for {len(ips)} IP(s)...", style="bold blue")
 
-    processed_data = iplens_api.fetch_data(ips)
+    try:
+        processed_data = iplens_api.fetch_data(ips)
+    except requests.RequestException as error:
+        console.print(f"Error: Failed to fetch IP data: {error}", style="bold red")
+        if isinstance(error, requests.exceptions.SSLError):
+            console.print(
+                "Hint: The configured API endpoint may have an invalid TLS certificate. "
+                "Use https://api.ipapi.is in config.cfg.",
+                style="yellow",
+            )
+        sys.exit(1)
 
-    if processed_data:
-        table = create_rich_table(processed_data)
-        console.print(table)
+    if not processed_data:
+        console.print(
+            "No IP data returned. Check your network connection or API rate limits.",
+            style="bold red",
+        )
+        sys.exit(1)
+
+    table = create_rich_table(processed_data)
+    console.print(table)
 
     if args.output:
         if not args.format:

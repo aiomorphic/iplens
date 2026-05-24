@@ -92,7 +92,9 @@ def test_fetch_data_single_ip(mock_get, ip_info_api, mock_db_cache, sample_ip_da
     filtered_result = {key: result[0].get(key, "") for key in expected_result.keys()}
 
     assert filtered_result == expected_result
-    mock_get.assert_called_once_with(f"{ip_info_api.api_url}?q=172.71.223.44")
+    mock_get.assert_called_once_with(
+        f"{ip_info_api.api_url}?q=172.71.223.44", timeout=ip_info_api.timeout
+    )
     mock_db_cache.set.assert_called_once()
 
 
@@ -111,7 +113,9 @@ def test_fetch_data_bulk(mock_post, ip_info_api, mock_db_cache):
     assert len(result) == 2
     assert all(ip_data["rir"] == "ARIN" for ip_data in result)
     mock_post.assert_called_once_with(
-        ip_info_api.api_url, json={"ips": ["172.71.223.44", "8.8.8.8"]}
+        ip_info_api.api_url,
+        json={"ips": ["172.71.223.44", "8.8.8.8"]},
+        timeout=ip_info_api.timeout,
     )
     assert mock_db_cache.set.call_count == 2
 
@@ -149,7 +153,9 @@ def test_fetch_single_ip_info_error(mock_get, ip_info_api):
         ip_info_api._fetch_single_ip_info("172.71.223.44")
 
     assert "404 Client Error: Not Found" in str(exc_info.value)
-    mock_get.assert_called_once_with(f"{ip_info_api.api_url}?q=172.71.223.44")
+    mock_get.assert_called_once_with(
+        f"{ip_info_api.api_url}?q=172.71.223.44", timeout=ip_info_api.timeout
+    )
 
 
 @patch("src.iplens.ipapi_api.requests.post")

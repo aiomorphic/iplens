@@ -61,7 +61,8 @@ class TestDataProcessing(unittest.TestCase):
 
         result = self.api.process_response(input_data)
 
-        self.assertEqual(result, {})
+        self.assertEqual(set(result.keys()), set(FIELDNAMES))
+        self.assertTrue(all(value == "" for value in result.values()))
 
 
 if __name__ == "__main__":

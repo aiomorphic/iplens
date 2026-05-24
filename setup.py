@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="iplens",
-    version="0.1.8",
+    version="0.2.1",
     author="aiomorphic",
     author_email="iplens@proton.me",
     description="A lightweight, modern, robust IP info CLI tool",
@@ -16,7 +16,7 @@ setup(
     package_dir={"": "src"},
     install_requires=[
         "requests>=2.25.1,<3.0.0",
-        "rich>=10.0.0,<11.0.0",
+        "rich>=10.0.0,<14.0.0",
     ],
     entry_points={
         "console_scripts": [
