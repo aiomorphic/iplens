@@ -16,7 +16,7 @@ setup(
     package_dir={"": "src"},
     install_requires=[
         "requests>=2.25.1,<3.0.0",
-        "rich>=10.0.0,<14.0.0",
+        "rich>=10.0.0,<16.0.0",
         "urllib3>=1.26.0,<3.0.0",
     ],
     entry_points={
