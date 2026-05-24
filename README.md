@@ -153,6 +153,8 @@ This will fetch and process the IP information for the given IP addresses. The r
 
 The configuration file is located at `src/iplens/config.cfg`. The default API endpoint is `https://api.ipapi.is` (the successor to `api.incolumitas.com`). Legacy URLs pointing at `api.incolumitas.com` are automatically rewritten at runtime.
 
+The SQLite cache is stored at `~/.cache/iplens/iplens_cache.db` by default.
+
 Available settings:
 
 - `[API] url` — API base URL (default: `https://api.ipapi.is`)
@@ -160,6 +162,13 @@ Available settings:
 - `[API] timeout` — HTTP request timeout in seconds
 - `[Cache] expire_days` — cache TTL in days
 - `[Logging] level` — log level (`DEBUG`, `INFO`, `WARNING`, etc.)
+- `[Input] max_file_bytes` — max size per input file (default: 50MB)
+- `[Input] max_folder_files` — max files scanned in folder mode
+- `[Input] max_folder_depth` — max directory depth for folder scans
+
+### Privacy
+
+Uncached IP addresses are sent to the configured API for enrichment. Folder and file modes may read many local paths; review inputs before running in sensitive environments.
 
 ### API Limits
 
