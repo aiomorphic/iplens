@@ -1,4 +1,4 @@
-from src.iplens.config_loader import DEFAULT_API_URL, normalize_api_url
+from iplens.config_loader import DEFAULT_API_URL, normalize_api_url
 
 
 def test_normalize_api_url_keeps_current_endpoint():

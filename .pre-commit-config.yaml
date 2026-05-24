@@ -23,8 +23,14 @@ repos:
         name: pytest
         entry: pytest
         language: system
-        args: ["--maxfail=1", "--disable-warnings", "tests/"]
+        args: ["--maxfail=1", "--disable-warnings", "--cov=src/iplens", "--cov-fail-under=75", "tests/"]
         files: ^tests/.*\.py$
+      - id: bandit
+        name: bandit
+        entry: bandit
+        language: system
+        args: ["-q", "-r", "src/iplens", "-s", "B608", "-s", "B104"]
+        files: ^src/iplens/.*\.py$
 
 
 

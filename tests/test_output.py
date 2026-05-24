@@ -3,8 +3,8 @@ import json
 import os
 import unittest
 
-from src.iplens.output import save_to_csv, save_to_json
-from src.iplens.utils import FIELDNAMES
+from iplens.output import save_to_csv, save_to_json
+from iplens.utils import FIELDNAMES
 
 
 class TestOutput(unittest.TestCase):

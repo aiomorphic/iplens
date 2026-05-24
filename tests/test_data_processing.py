@@ -1,12 +1,18 @@
 import unittest
+from unittest.mock import Mock, patch
 
-from src.iplens.ipapi_api import IPInfoAPI
-from src.iplens.utils import FIELDNAMES
+from iplens.ipapi_api import IPInfoAPI
+from iplens.utils import FIELDNAMES
 
 
 class TestDataProcessing(unittest.TestCase):
     def setUp(self):
+        self.cache_patcher = patch("iplens.ipapi_api.DBCache", return_value=Mock())
+        self.cache_patcher.start()
         self.api = IPInfoAPI()
+
+    def tearDown(self):
+        self.cache_patcher.stop()
 
     def test_process_response_complete(self):
 
