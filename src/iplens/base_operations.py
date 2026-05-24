@@ -52,7 +52,7 @@ class IPInfoOperation(BaseOperation[List[str]]):
 
     def process(self, ips: List[str]) -> List[Dict[str, Any]]:
         """
-        Process a list of IP addresses by fetching data and processing the response.
+        Fetch and return processed IP data (alias for fetch_data).
 
         Args:
             ips (List[str]): List of IP addresses.
@@ -60,5 +60,4 @@ class IPInfoOperation(BaseOperation[List[str]]):
         Returns:
             List[Dict[str, Any]]: Processed data for each IP address.
         """
-        raw_data = self.fetch_data(ips)
-        return [self.process_response(item) for item in raw_data]
+        return self.fetch_data(ips)

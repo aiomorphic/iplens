@@ -3,22 +3,21 @@ import time
 from typing import Any, Dict, List
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from iplens.base_operations import IPInfoOperation
 from iplens.config_loader import DEFAULT_API_URL, load_config, normalize_api_url
 from iplens.db_cache import DBCache
 from iplens.logger import logger
-from iplens.utils import FIELDNAMES
+from iplens.utils import FIELDNAMES, chunks, dedupe_ips
 
 REQUEST_TIMEOUT = 30
+RETRY_STATUS_CODES = (429, 500, 502, 503, 504)
 
 
 class IPInfoAPI(IPInfoOperation):
     def __init__(self):
-        """
-        Initialize the IPInfoAPI class with API URL and backoff factor loaded from the configuration file.
-        The class also initializes the cache for storing IP information.
-        """
         config = load_config()
         api_url = normalize_api_url(
             config.get("API", "url", fallback=DEFAULT_API_URL)
@@ -28,87 +27,131 @@ class IPInfoAPI(IPInfoOperation):
         super().__init__(api_url, backoff_factor)
         self.timeout = timeout
         self.cache = DBCache()
+        self.session = self._build_session()
+
+    def _build_session(self) -> requests.Session:
+        session = requests.Session()
+        retry = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=list(RETRY_STATUS_CODES),
+            allowed_methods=["GET", "POST"],
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def fetch_data(self, ips: List[str], chunk_size: int = 100) -> List[Dict[str, Any]]:
-        """
-        Fetch data for a list of IP addresses. The method checks the cache first,
-        and if the IP information is not available, it fetches the data from the API.
-
-        Args:
-            ips (List[str]): List of IP addresses to fetch data for.
-            chunk_size (int): Number of IPs to fetch in each bulk request. Default is 100.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the processed data for each IP address.
-        """
-        response_data_list = []
-        ips_to_fetch = []
+        unique_ips = dedupe_ips(ips)
+        response_data_list: List[Dict[str, Any]] = []
+        ips_to_fetch: List[str] = []
         fetched_from_cache = 0
         fetched_from_api = 0
         failed_requests = 0
 
-        logger.info(f"Starting to fetch data for {len(ips)} IP(s)...")
+        logger.info(f"Starting to fetch data for {len(unique_ips)} IP(s)...")
 
-        for ip in ips:
+        for ip in unique_ips:
             cached_data = self.cache.get(ip)
             if cached_data:
                 logger.info(f"Using cached data for IP: {ip}")
-                logger.info("Local cache DB source used")
                 response_data_list.append(cached_data)
                 fetched_from_cache += 1
             else:
-                logger.info(f"IP {ip} not found in cache, adding to fetch list")
                 ips_to_fetch.append(ip)
 
-        if len(ips_to_fetch) > 0 and len(ips_to_fetch) < 2:
-            logger.info("Using regular requests for fewer than 2 IPs")
-            for ip in ips_to_fetch:
-                try:
-                    response_data = self._fetch_single_ip_info(ip)
-                    processed_data = self.process_response(response_data)
-                    response_data_list.append(processed_data)
-                    self.cache.set(ip, processed_data)
-                    logger.info(f"Fetched and cached data for IP: {ip}")
-                    fetched_from_api += 1
-                except requests.HTTPError as e:
-                    self._log_request_error(f"Error fetching IP {ip}", e)
-                    failed_requests += 1
-                except requests.RequestException as e:
-                    self._log_request_error(f"Error fetching IP {ip}", e)
-                    failed_requests += 1
-
-        elif len(ips_to_fetch) >= 2:
-            logger.info("Using bulk request for 2 or more IPs")
-            for i in range(0, len(ips_to_fetch), chunk_size):
-                ip_chunk = ips_to_fetch[i : i + chunk_size]
-                try:
-                    response_data = self._fetch_ip_info(ip_chunk)
-                    for ip, ip_data in response_data.items():
-                        if ip != "total_elapsed_ms":
-                            processed_data = self.process_response(ip_data)
-                            response_data_list.append(processed_data)
-                            self.cache.set(ip, processed_data)
-                            logger.info(f"Fetched and cached data for IP: {ip}")
-                            fetched_from_api += 1
-                    logger.info(
-                        f"Processed IPs {i+1} to {i+len(ip_chunk)} of {len(ips_to_fetch)}."
-                    )
-                    time.sleep(self.backoff_factor)
-                except requests.HTTPError as e:
-                    self._log_request_error("Error during bulk request", e)
-                    failed_requests += 1
-                except requests.RequestException as e:
-                    self._log_request_error("Error during bulk request", e)
-                    failed_requests += 1
-
-        if logger.isEnabledFor(logging.WARNING):
-            logger.warning(
-                f"Summary: {fetched_from_cache} IP(s) fetched from cache, "
-                f"{fetched_from_api} IP(s) fetched from API, "
-                f"{failed_requests} IP(s) failed due to issues."
+        if len(ips_to_fetch) == 1:
+            api_count, fail_count = self._fetch_ips_individually(
+                ips_to_fetch, response_data_list
             )
+            fetched_from_api += api_count
+            failed_requests += fail_count
+        elif len(ips_to_fetch) >= 2:
+            api_count, fail_count = self._fetch_ips_in_chunks(
+                ips_to_fetch, response_data_list, chunk_size
+            )
+            fetched_from_api += api_count
+            failed_requests += fail_count
+
+        summary = (
+            f"Summary: {fetched_from_cache} IP(s) from cache, "
+            f"{fetched_from_api} IP(s) from API, "
+            f"{failed_requests} IP(s) failed."
+        )
+        if failed_requests:
+            logger.warning(summary)
+        else:
+            logger.info(summary)
 
         return response_data_list
+
+    def _fetch_ips_individually(
+        self, ips: List[str], response_data_list: List[Dict[str, Any]]
+    ) -> tuple[int, int]:
+        fetched = 0
+        failed = 0
+        for ip in ips:
+            if self._fetch_and_store_single(ip, response_data_list):
+                fetched += 1
+            else:
+                failed += 1
+        return fetched, failed
+
+    def _fetch_ips_in_chunks(
+        self,
+        ips_to_fetch: List[str],
+        response_data_list: List[Dict[str, Any]],
+        chunk_size: int,
+    ) -> tuple[int, int]:
+        fetched = 0
+        failed = 0
+        chunk_list = list(chunks(ips_to_fetch, chunk_size))
+
+        for index, ip_chunk in enumerate(chunk_list):
+            chunk_fetched, chunk_failed = self._fetch_chunk(
+                ip_chunk, response_data_list
+            )
+            fetched += chunk_fetched
+            failed += chunk_failed
+
+            if index < len(chunk_list) - 1:
+                time.sleep(self.backoff_factor)
+
+        return fetched, failed
+
+    def _fetch_chunk(
+        self, ip_chunk: List[str], response_data_list: List[Dict[str, Any]]
+    ) -> tuple[int, int]:
+        try:
+            response_data = self._fetch_ip_info(ip_chunk)
+            fetched = 0
+            for ip, ip_data in response_data.items():
+                if ip == "total_elapsed_ms":
+                    continue
+                processed_data = self.process_response(ip_data)
+                response_data_list.append(processed_data)
+                self.cache.set(ip, processed_data)
+                fetched += 1
+            logger.info(f"Bulk request succeeded for {fetched} IP(s).")
+            return fetched, 0
+        except requests.RequestException as error:
+            self._log_request_error("Error during bulk request", error)
+            return self._fetch_ips_individually(ip_chunk, response_data_list)
+
+    def _fetch_and_store_single(
+        self, ip: str, response_data_list: List[Dict[str, Any]]
+    ) -> bool:
+        try:
+            response_data = self._fetch_single_ip_info(ip)
+            processed_data = self.process_response(response_data)
+            response_data_list.append(processed_data)
+            self.cache.set(ip, processed_data)
+            return True
+        except requests.RequestException as error:
+            self._log_request_error(f"Error fetching IP {ip}", error)
+            return False
 
     def _log_request_error(self, message: str, error: requests.RequestException) -> None:
         logger.error(f"{message}: {error}")
@@ -117,40 +160,23 @@ class IPInfoAPI(IPInfoOperation):
             logger.error(f"Response content: {response.text}")
 
     def _fetch_ip_info(self, ips: List[str]) -> Dict:
-        """
-        Fetch information for a list of IP addresses in bulk.
-
-        Args:
-            ips (List[str]): List of IP addresses to fetch data for.
-
-        Returns:
-            Dict: A dictionary with IP addresses as keys and their corresponding data as values.
-        """
         logger.info(f"Making bulk request for {len(ips)} IP(s)")
-        ips_dict = {"ips": ips}
-        response = requests.post(
-            self.api_url, json=ips_dict, timeout=self.timeout
+        response = self.session.post(
+            self.api_url,
+            json={"ips": ips},
+            timeout=self.timeout,
         )
         if not response.ok:
             logger.error(f"Bulk request failed with status code {response.status_code}")
             logger.error(f"Response content: {response.text}")
             response.raise_for_status()
-        logger.info("Bulk request successful")
         return response.json()
 
     def _fetch_single_ip_info(self, ip: str) -> Dict:
-        """
-        Fetch information for a single IP address.
-
-        Args:
-            ip (str): The IP address to fetch data for.
-
-        Returns:
-            Dict: A dictionary containing the data for the IP address.
-        """
         logger.info(f"Making single request for IP: {ip}")
-        response = requests.get(
-            f"{self.api_url}?q={ip}", timeout=self.timeout
+        response = self.session.get(
+            f"{self.api_url}?q={ip}",
+            timeout=self.timeout,
         )
         if not response.ok:
             logger.error(
@@ -158,24 +184,14 @@ class IPInfoAPI(IPInfoOperation):
             )
             logger.error(f"Response content: {response.text}")
             response.raise_for_status()
-        logger.info(f"Single request successful for IP: {ip}")
         return response.json()
 
     def process_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process the response data from the API, extracting and formatting the relevant fields.
-
-        Args:
-            response (Dict[str, Any]): The API response for a single IP address.
-
-        Returns:
-            Dict[str, Any]: A dictionary with the processed IP information.
-        """
         if not response or not isinstance(response, dict):
             logger.warning(f"Invalid response received: {response}")
             return {field: "" for field in FIELDNAMES}
 
-        data = {}
+        data: Dict[str, str] = {}
         for field in FIELDNAMES:
             try:
                 parts = field.split("_")
@@ -194,7 +210,6 @@ class IPInfoAPI(IPInfoOperation):
                 if value is not None:
                     if field == "asn_asn" and value and not str(value).startswith("AS"):
                         value = f"AS{value}"
-
                     if value is False:
                         value = "False"
                     elif value is True:
@@ -202,28 +217,23 @@ class IPInfoAPI(IPInfoOperation):
                     data[field] = str(value)
                 else:
                     data[field] = ""
-            except Exception as e:
-                logger.error(f"Error processing field {field}: {str(e)}")
+            except (TypeError, AttributeError, KeyError) as error:
+                logger.error(f"Error processing field {field}: {error}")
                 data[field] = ""
 
-        # Special handling for RIR field
-        try:
-            if (
-                "rir" in FIELDNAMES
-                and "asn" in response
-                and isinstance(response["asn"], dict)
-            ):
-                data["rir"] = response["asn"].get("rir", "")
-        except Exception as e:
-            logger.error(f"Error processing RIR field: {str(e)}")
-            data["rir"] = ""
+        if (
+            "rir" in FIELDNAMES
+            and "asn" in response
+            and isinstance(response["asn"], dict)
+        ):
+            data["rir"] = str(response["asn"].get("rir", "") or "")
 
-        logger.debug(f"Processed response data: {data}")
         return data
 
-    def clear_expired_cache(self):
-        """
-        Clear expired cache entries from the local cache.
-        """
+    def clear_expired_cache(self) -> int:
         logger.info("Clearing expired cache entries")
-        self.cache.clear_expired()
+        return self.cache.clear_expired()
+
+    def clear_all_cache(self) -> int:
+        logger.info("Clearing entire cache")
+        return self.cache.clear_all()

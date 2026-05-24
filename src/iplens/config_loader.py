@@ -32,20 +32,3 @@ def load_config(config_file="config.cfg"):
     config.read(config_path)
 
     return config
-
-
-def get_all_config_values(config):
-    """
-    Get all configuration values from the loaded configuration.
-
-    Args:
-        config (configparser.ConfigParser): Configuration object.
-
-    Returns:
-        dict: Dictionary of configuration values organized by section.
-    """
-    config_values = {
-        section: {key: config.get(section, key) for key in config[section]}
-        for section in config.sections()
-    }
-    return config_values
