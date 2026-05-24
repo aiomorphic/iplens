@@ -102,7 +102,7 @@ Note: The tool will automatically detect the input file format and extract valid
     "company_type": "business",
     "company_domain": "google.com",
     "company_network": "8.8.8.0 - 8.8.8.255",
-    "company_whois": "https://api.incolumitas.com/?whois=8.8.8.0",
+    "company_whois": "https://api.ipapi.is/?whois=8.8.8.0",
     "abuse_email": "network-abuse@google.com",
     "asn_asn": "AS15169",
     "asn_abuser_score": "0 (Very Low)",
@@ -117,7 +117,7 @@ Note: The tool will automatically detect the input file format and extract valid
     "asn_created": "2000-03-30",
     "asn_updated": "2012-02-24",
     "asn_rir": "ARIN",
-    "asn_whois": "https://api.incolumitas.com/?whois=AS15169",
+    "asn_whois": "https://api.ipapi.is/?whois=AS15169",
     "location_country": "United States",
     "location_country_code": "US",
     "location_state": "California",
@@ -132,7 +132,7 @@ Note: The tool will automatically detect the input file format and extract valid
 
 ```csv
 ip,rir,is_bogon,is_datacenter,is_tor,is_proxy,is_vpn,is_abuser,company_name,company_abuser_score,company_type,company_domain,company_network,company_whois,abuse_email,asn_asn,asn_abuser_score,asn_route,asn_descr,asn_country,asn_active,asn_org,asn_domain,asn_abuse,asn_type,asn_created,asn_updated,asn_rir,asn_whois,location_country,location_country_code,location_state,location_city,location_latitude,location_longitude,location_zip,location_timezone
-8.8.8.8,ARIN,False,True,False,False,True,True,Google LLC,0.0039 (Low),business,google.com,8.8.8.0 - 8.8.8.255,https://api.incolumitas.com/?whois=8.8.8.0,network-abuse@google.com,AS15169,0 (Very Low),8.8.8.0/24,"GOOGLE, US",us,True,Google LLC,google.com,network-abuse@google.com,business,2000-03-30,2012-02-24,ARIN,https://api.incolumitas.com/?whois=AS15169,United States,US,California,Sunnyvale,37.36883,-122.03635,95196,America/Los_Angeles
+8.8.8.8,ARIN,False,True,False,False,True,True,Google LLC,0.0039 (Low),business,google.com,8.8.8.0 - 8.8.8.255,https://api.ipapi.is/?whois=8.8.8.0,network-abuse@google.com,AS15169,0 (Very Low),8.8.8.0/24,"GOOGLE, US",us,True,Google LLC,google.com,network-abuse@google.com,business,2000-03-30,2012-02-24,ARIN,https://api.ipapi.is/?whois=AS15169,United States,US,California,Sunnyvale,37.36883,-122.03635,95196,America/Los_Angeles
 
 ```
 
@@ -144,14 +144,22 @@ IP Lens can also be utilized as a Python library for direct integration into you
 from iplens.api import IPInfoAPI
 
 api = IPInfoAPI()
-results = api.process(['8.8.8.8', '1.1.1.1'])
+results = api.fetch_data(['8.8.8.8', '1.1.1.1'])
 ```
 
-This will fetch and process the IP information for the given IP addresses. The results will include detailed information such as ASN, location, company details, and more, extracted and formatted for easy access
+This will fetch and process the IP information for the given IP addresses. The results will include detailed information such as ASN, location, company details, and more, extracted and formatted for easy access.
 
 ### Configuration
 
-The configuration file is located at `src/iplens/config.cfg`. You can modify the configuration file to suit your specific requirements. The available fields and their purposes are defined in the `src/config_loader.py`.
+The configuration file is located at `src/iplens/config.cfg`. The default API endpoint is `https://api.ipapi.is` (the successor to `api.incolumitas.com`). Legacy URLs pointing at `api.incolumitas.com` are automatically rewritten at runtime.
+
+Available settings:
+
+- `[API] url` — API base URL (default: `https://api.ipapi.is`)
+- `[API] backoff_factor` — seconds to wait between bulk requests
+- `[API] timeout` — HTTP request timeout in seconds
+- `[Cache] expire_days` — cache TTL in days
+- `[Logging] level` — log level (`DEBUG`, `INFO`, `WARNING`, etc.)
 
 ### API Limits
 

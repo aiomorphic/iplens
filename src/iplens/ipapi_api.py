@@ -5,10 +5,12 @@ from typing import Any, Dict, List
 import requests
 
 from iplens.base_operations import IPInfoOperation
-from iplens.config_loader import load_config
+from iplens.config_loader import DEFAULT_API_URL, load_config, normalize_api_url
 from iplens.db_cache import DBCache
 from iplens.logger import logger
 from iplens.utils import FIELDNAMES
+
+REQUEST_TIMEOUT = 30
 
 
 class IPInfoAPI(IPInfoOperation):
@@ -18,9 +20,13 @@ class IPInfoAPI(IPInfoOperation):
         The class also initializes the cache for storing IP information.
         """
         config = load_config()
-        api_url = config.get("API", "url")
-        backoff_factor = int(config.get("API", "backoff_factor"))
+        api_url = normalize_api_url(
+            config.get("API", "url", fallback=DEFAULT_API_URL)
+        )
+        backoff_factor = int(config.get("API", "backoff_factor", fallback=2))
+        timeout = int(config.get("API", "timeout", fallback=REQUEST_TIMEOUT))
         super().__init__(api_url, backoff_factor)
+        self.timeout = timeout
         self.cache = DBCache()
 
     def fetch_data(self, ips: List[str], chunk_size: int = 100) -> List[Dict[str, Any]]:
@@ -65,8 +71,10 @@ class IPInfoAPI(IPInfoOperation):
                     logger.info(f"Fetched and cached data for IP: {ip}")
                     fetched_from_api += 1
                 except requests.HTTPError as e:
-                    logger.error(f"Error fetching IP {ip}: {e}")
-                    logger.error(f"Response content: {e.response.text}")
+                    self._log_request_error(f"Error fetching IP {ip}", e)
+                    failed_requests += 1
+                except requests.RequestException as e:
+                    self._log_request_error(f"Error fetching IP {ip}", e)
                     failed_requests += 1
 
         elif len(ips_to_fetch) >= 2:
@@ -87,8 +95,10 @@ class IPInfoAPI(IPInfoOperation):
                     )
                     time.sleep(self.backoff_factor)
                 except requests.HTTPError as e:
-                    logger.error(f"Error during bulk request: {e}")
-                    logger.error(f"Response content: {e.response.text}")
+                    self._log_request_error("Error during bulk request", e)
+                    failed_requests += 1
+                except requests.RequestException as e:
+                    self._log_request_error("Error during bulk request", e)
                     failed_requests += 1
 
         if logger.isEnabledFor(logging.WARNING):
@@ -99,6 +109,12 @@ class IPInfoAPI(IPInfoOperation):
             )
 
         return response_data_list
+
+    def _log_request_error(self, message: str, error: requests.RequestException) -> None:
+        logger.error(f"{message}: {error}")
+        response = getattr(error, "response", None)
+        if response is not None:
+            logger.error(f"Response content: {response.text}")
 
     def _fetch_ip_info(self, ips: List[str]) -> Dict:
         """
@@ -112,7 +128,9 @@ class IPInfoAPI(IPInfoOperation):
         """
         logger.info(f"Making bulk request for {len(ips)} IP(s)")
         ips_dict = {"ips": ips}
-        response = requests.post(self.api_url, json=ips_dict)
+        response = requests.post(
+            self.api_url, json=ips_dict, timeout=self.timeout
+        )
         if not response.ok:
             logger.error(f"Bulk request failed with status code {response.status_code}")
             logger.error(f"Response content: {response.text}")
@@ -131,7 +149,9 @@ class IPInfoAPI(IPInfoOperation):
             Dict: A dictionary containing the data for the IP address.
         """
         logger.info(f"Making single request for IP: {ip}")
-        response = requests.get(f"{self.api_url}?q={ip}")
+        response = requests.get(
+            f"{self.api_url}?q={ip}", timeout=self.timeout
+        )
         if not response.ok:
             logger.error(
                 f"Single request failed for IP {ip} with status code {response.status_code}"
